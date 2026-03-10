@@ -8,8 +8,7 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 5,         // Plan DEV de Clever Cloud tiene límite bajo
-  queueLimit: 0,
-  ssl: { rejectUnauthorized: false },  // Clever Cloud requiere SSL
+  queueLimit: 0
 });
 
 async function testConnection() {
