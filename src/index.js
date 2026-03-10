@@ -18,6 +18,7 @@ app.use(cors({
 }));
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
+app.set('trust proxy', 1);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 20,                   // máx 20 requests por IP en ese ventana
