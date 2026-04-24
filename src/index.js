@@ -4,7 +4,8 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { testConnection } = require('./config/db');
-const authRoutes = require('./routes/auth.routes');
+const authRoutes       = require('./routes/auth.routes');
+const documentosRoutes = require('./routes/documentos.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,15 +20,25 @@ app.use(cors({
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 app.set('trust proxy', 1);
+
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 20,                   // máx 20 requests por IP en ese ventana
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   message: { success: false, message: 'Demasiadas solicitudes. Intenta de nuevo en 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 30,                   // máx 30 subidas por hora por IP
+  message: { success: false, message: 'Límite de subidas alcanzado. Intenta en 1 hora.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ─── Body Parser ──────────────────────────────────────────────────────────────
+// Nota: multer maneja multipart/form-data por su cuenta, esto es solo para JSON
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: false }));
 
@@ -35,20 +46,22 @@ app.use(express.urlencoded({ extended: false }));
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'API funcionando correctamente',
+    message: '🔐 Auth API funcionando correctamente',
     version: '1.0.0',
     endpoints: {
-      register:  'POST /api/v1/auth/register',
-      login:     'POST /api/v1/auth/login',
-      refresh:   'POST /api/v1/auth/refresh',
-      logout:    'POST /api/v1/auth/logout  (requiere token)',
-      profile:   'GET  /api/v1/auth/profile  (requiere token)',
+      register:          'POST /api/auth/register',
+      login:             'POST /api/auth/login',
+      refresh:           'POST /api/auth/refresh',
+      logout:            'POST /api/auth/logout          🔒',
+      profile:           'GET  /api/auth/profile          🔒',
+      subirDocumento:    'POST /api/documentos/subir      🔒 multipart/form-data',
+      listarDocumentos:  'GET  /api/documentos            🔒',
     },
   });
 });
 
-// Aplicar rate limiter solo a rutas de auth
-app.use('/api/v1/auth', authLimiter, authRoutes);
+app.use('/api/auth',       authLimiter,   authRoutes);
+app.use('/api/documentos', uploadLimiter, documentosRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -65,8 +78,8 @@ app.use((err, req, res, _next) => {
 async function start() {
   await testConnection();
   app.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
-    console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+    console.log(`📍 Entorno: ${process.env.NODE_ENV || 'development'}`);
   });
 }
 
